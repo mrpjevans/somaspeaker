@@ -3,15 +3,12 @@ from paho.mqtt import client as mqtt_client
 import subprocess
 from time import sleep
 
+import config
+
 FIRST_RECONNECT_DELAY = 1
 RECONNECT_RATE = 2
 MAX_RECONNECT_COUNT = 12
 MAX_RECONNECT_DELAY = 60
-
-broker = '192.168.1.10'
-port = 1883
-topic = "study/sonos1/somafm"
-client_id = "soma1"
 
 current_channel = "groovesalad"
 current_volume = 60
@@ -35,9 +32,9 @@ def connect_mqtt():
         else:
             print("Failed to connect, return code %d\n", rc)
     # Set Connecting Client ID
-    client = mqtt_client.Client(client_id)
+    client = mqtt_client.Client(mqtt_client.CallbackAPIVersion.VERSION1, config.client_id)
     client.on_connect = on_connect
-    client.connect(broker, port)
+    client.connect(config.broker, config.port)
     return client
 
 
@@ -66,7 +63,7 @@ def subscribe(client: mqtt_client):
         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
         trigger(msg.payload.decode())
 
-    client.subscribe(topic)
+    client.subscribe(config.topic)
     client.on_message = on_message
 
 def trigger(msg):
@@ -98,6 +95,7 @@ def trigger(msg):
     elif parts[0] == "play":
         subprocess.Popen(['./somafm.sh', 'play', current_channel])
 
-# client = connect_mqtt()
-# subscribe(client)
-# client.loop_forever()
+if config.mode == 'mqtt':
+    client = connect_mqtt()
+    subscribe(client)
+    client.loop_forever()
